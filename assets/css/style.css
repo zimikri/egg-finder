@@ -1,0 +1,14 @@
+body {
+    /* background-image: url(./assets/images/field.png); */
+}
+body, .main-canvas {
+    margin: 0;
+}
+.main-canvas {
+
+}
+#center-container {
+display: flex;
+justify-content: center;
+align-items: center;
+}
