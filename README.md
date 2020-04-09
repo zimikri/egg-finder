@@ -1,2 +1,3 @@
-# egg-finder.github.io
+# Egg finder
+
 Easter egg finder in quarantine time. Just to play with classes and drawing...
