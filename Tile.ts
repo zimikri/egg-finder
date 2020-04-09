@@ -64,7 +64,6 @@ export default class Tile {
 
     setSweetieType(type: string) {
         this._sweetie.type = type;
-
     }
 
     private getImage(): HTMLImageElement {
@@ -86,11 +85,7 @@ export default class Tile {
         if (this._sweetie != undefined) {
             if (this._visible == false) this._sweetie.crash();
             if (this._visible == true) this._sweetie.eat();
-
-            // console.log(this._sweetie.toString());
-            
         } else {
-            // console.log('no sweetie');
             
         }
         

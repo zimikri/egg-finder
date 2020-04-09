@@ -26,15 +26,12 @@ class Playground {
         this._ctx.clearRect(0, 0, this._size, this._size);
         //    this._ctx.fillStyle = 'rgba(0,0,0,0.2)';
         //    this._ctx.fillRect(0, 0, this._size, this._size);
-        // this._ctx.drawImage(this._background, 0, 0, this._size, this._size);
+        //    this._ctx.drawImage(this._background, 0, 0, this._size, this._size);
         const sweetiesCount = this._sweetiesCount + ((this._withFox) ? 1 : 0);
-        console.log(this._countOfTiles ** 2, this._talesVisible, sweetiesCount);
         this._tiles.forEach((tilesRow, rowIndex) => {
             tilesRow.forEach((tile, colIndex) => {
                 tile.size = this._tileSize;
                 if (this.isWin()) {
-                    console.log(rowIndex, colIndex, tile);
-                    // if (tile.hasSweetie()) tile.sweetie.type = 'egg';
                     if (tile.hasSweetie())
                         tile.setSweetieType('egg');
                     tile.setVisible();
@@ -147,7 +144,6 @@ class Sweetie {
         this._img = document.getElementById(this._type);
         this._crashed = false;
         this._eaten = false;
-        // this.toString();
     }
     crash() {
         if (this._type != 'fox' && this._crashed == false) {
@@ -226,12 +222,6 @@ class Tile {
         this._sweetie.type = type;
     }
     getImage() {
-        if (this.hasSweetie()) {
-            console.log(this._sweetie);
-            console.log(this._sweetie.type);
-            if (this._sweetie.type == 'fox')
-                return document.getElementById('fox');
-        }
         if (this._visible == false)
             return this._coverImage;
         if (this._sweetie != undefined)
@@ -252,10 +242,8 @@ class Tile {
                 this._sweetie.crash();
             if (this._visible == true)
                 this._sweetie.eat();
-            // console.log(this._sweetie.toString());
         }
         else {
-            // console.log('no sweetie');
         }
         this._visible = true;
         // this.render(ctx);

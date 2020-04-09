@@ -40,12 +40,10 @@ export default class Playground {
        this._ctx.clearRect(0, 0, this._size, this._size);
     //    this._ctx.fillStyle = 'rgba(0,0,0,0.2)';
     //    this._ctx.fillRect(0, 0, this._size, this._size);
-       // this._ctx.drawImage(this._background, 0, 0, this._size, this._size);
+    //    this._ctx.drawImage(this._background, 0, 0, this._size, this._size);
 
        const sweetiesCount: number = this._sweetiesCount + ((this._withFox) ? 1 : 0);
         
-       console.log(this._countOfTiles ** 2, this._talesVisible, sweetiesCount);
-
         this._tiles.forEach((tilesRow, rowIndex) => {
             tilesRow.forEach((tile, colIndex) => {
                 tile.size = this._tileSize;

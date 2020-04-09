@@ -11,8 +11,6 @@ export default class Sweetie {
         this._img = document.getElementById(this._type) as HTMLImageElement;
         this._crashed = false;
         this._eaten = false;
-
-        // this.toString();
     }
 
     crash() {
