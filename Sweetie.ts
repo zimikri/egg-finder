@@ -22,6 +22,7 @@ export default class Sweetie {
     }
 
     eat() {
+        return;
         if (this._type != 'fox' && this._crashed == false)
         {
             this._eaten = true;
@@ -30,6 +31,10 @@ export default class Sweetie {
     }
 
     get img(): HTMLImageElement {
+        return this._img;
+    }
+
+    getImage(): HTMLImageElement {
         return this._img;
     }
 
@@ -42,6 +47,14 @@ export default class Sweetie {
             this._type = toType;
             this._img = document.getElementById(this._type) as HTMLImageElement;
         }
+    }
+
+    getCrashed():boolean {
+        return this._crashed;
+    }
+
+    getEaten():boolean {
+        return this._eaten;
     }
 
     toString(): string {

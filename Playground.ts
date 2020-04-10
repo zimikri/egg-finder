@@ -1,5 +1,7 @@
 'use strict';
 
+import LevelSatus from './LevelSatus';
+import LevelSettings from './LevelSettings';
 import Tile from './Tile';
 import Sweetie from './Sweetie';
 
@@ -13,15 +15,20 @@ export default class Playground {
     private _sweetiesCount: number;
     private _withFox: boolean;
     private _talesVisible: number;
+    private _levelSettings: LevelSettings;
+    private _isLostLevel: boolean;
 
-    constructor(size: number, countOfTiles: number, ctx: CanvasRenderingContext2D, sweetiesCount: number = 10, withFox: boolean = false) {
-        this._size = size;
-        this._countOfTiles = countOfTiles;
+    constructor(settings: LevelSettings) {
+        
+        this._levelSettings = settings;
+        this._size = this._levelSettings.size;
+        this._countOfTiles = this._levelSettings.countOfTiles;
         this._tileSize = this._size / this._countOfTiles;
-        this._ctx = ctx;
-        this._sweetiesCount = sweetiesCount;
-        this._withFox = withFox;
+        this._ctx = this._levelSettings.ctx;
+        this._sweetiesCount = this._levelSettings.sweetiesCount;
+        this._withFox = this._levelSettings.withFox;
         this._talesVisible = 0;
+        this._isLostLevel = false;
 
         this._background = document.getElementById('field') as HTMLImageElement;
 
@@ -38,8 +45,8 @@ export default class Playground {
 
     render() {
        this._ctx.clearRect(0, 0, this._size, this._size);
-    //    this._ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    //    this._ctx.fillRect(0, 0, this._size, this._size);
+       this._ctx.fillStyle = '#7EB25F';
+       this._ctx.fillRect(0, 0, this._size, this._size);
     //    this._ctx.drawImage(this._background, 0, 0, this._size, this._size);
 
        const sweetiesCount: number = this._sweetiesCount + ((this._withFox) ? 1 : 0);
@@ -54,29 +61,6 @@ export default class Playground {
                 tile.render(this._ctx, this._tileSize * rowIndex, this._tileSize * colIndex);
             });
         });
-    }
-
-    click(x: number, y: number) {
-        const xPos = Math.floor(x / this._tileSize) % this._countOfTiles;
-        const yPos = Math.floor(y / this._tileSize) % this._countOfTiles;
-
-        if (this._tiles[xPos][yPos].visible == false && this._tiles[xPos][yPos].hasSweetie() == false) {
-            this._talesVisible++;
-        }
-
-        this._tiles[xPos][yPos].click();
-
-        if (this._tiles[xPos][yPos].neighbourSweetiesCount == 0) {
-            this.showTilesAround(xPos, yPos);
-        }
-
-        this.render();
-    }
-
-    private isWin(): boolean {
-        const sweetiesCount: number = this._sweetiesCount + ((this._withFox) ? 1 : 0);
-        
-        return this._countOfTiles ** 2 == (sweetiesCount + this._talesVisible);
     }
 
     private initTiles() {
@@ -102,27 +86,30 @@ export default class Playground {
         if (this._withFox) {
             randomRowIndex = this.getRandomIndex();
             randomColumnIndex = this.getRandomIndex();
-            this._tiles[randomColumnIndex][randomRowIndex].sweetie = new Sweetie('fox');
-            this._tiles[randomColumnIndex][randomRowIndex].neighbourSweetiesCount = 9;
+            this._tiles[randomRowIndex][randomColumnIndex].sweetie = new Sweetie('fox');
+            this._tiles[randomRowIndex][randomColumnIndex].neighbourSweetiesCount = 9;
         }
             
         while (addedSweeties < this._sweetiesCount) {
             randomRowIndex = this.getRandomIndex();
             randomColumnIndex = this.getRandomIndex();
             
-            if (this._tiles[randomColumnIndex][randomRowIndex].hasSweetie() == false) {
-                this._tiles[randomColumnIndex][randomRowIndex].sweetie = new Sweetie('egg');
-                this._tiles[randomColumnIndex][randomRowIndex].neighbourSweetiesCount = 9;
+            if (this._tiles[randomRowIndex][randomColumnIndex].hasSweetie() == false) {
+                this._tiles[randomRowIndex][randomColumnIndex].sweetie = new Sweetie('egg');
+                this._tiles[randomRowIndex][randomColumnIndex].neighbourSweetiesCount = 9;
+
+                // console.log(randomRowIndex, randomColumnIndex, this._tiles[randomRowIndex][randomColumnIndex]);
+                
                 addedSweeties++;
             }
         }
     }
 
     private neighbourSweetiesCount() {
-        this._tiles.forEach((tileRow, x) => {
-            tileRow.forEach((tile, y) => {
+        this._tiles.forEach((tileRow, rowPos) => {
+            tileRow.forEach((tile, colPos) => {
                 if (tile.hasSweetie() == false && tile.neighbourSweetiesCount < 9) {
-                    tile.neighbourSweetiesCount = this.findNeighbourIndexes(x, y)
+                    tile.neighbourSweetiesCount = this.findNeighbourIndexes(colPos, rowPos)
                     .filter((indexes) => {return this._tiles[indexes[0]][indexes[1]].hasSweetie();})
                     .length;
                 }
@@ -130,23 +117,23 @@ export default class Playground {
         });
     }
 
-    private findNeighbourIndexes(x:number, y: number): number[][] {
+    private findNeighbourIndexes(colPos:number, rowPos: number): number[][] {
         const neighbourIndexes: number[][] = [];
-
-        for (let deltaX = -1; deltaX <= 1; deltaX++) {
-            for (let deltaY = -1; deltaY <= 1; deltaY++) {
-                if (deltaX == 0 && deltaY == 0) continue;
-                if (this.isValidIndexes(x + deltaX, y + deltaY)) {
-                    neighbourIndexes.push([x + deltaX, y + deltaY])
+    
+        for (let deltaCol = -1; deltaCol <= 1; deltaCol++) {
+            for (let deltaRow = -1; deltaRow <= 1; deltaRow++) {
+                if (deltaCol == 0 && deltaRow == 0) continue;
+                if (this.isValidIndexes(rowPos + deltaCol, colPos + deltaRow)) {
+                    neighbourIndexes.push([rowPos + deltaCol, colPos + deltaRow])
                 }
             }
         }
-
+    
         return neighbourIndexes;
     }
-
-    showTilesAround(xPos: number, yPos: number): void {
-        const neighbourIndexes: number[][] = this.findNeighbourIndexes(xPos, yPos);
+    
+    showTilesAround(rowPos: number, colPos: number): void {
+        const neighbourIndexes: number[][] = this.findNeighbourIndexes(colPos, rowPos);
 
         for (let i = 0; i < neighbourIndexes.length; i++) {
             const tile: Tile = this._tiles[neighbourIndexes[i][0]][neighbourIndexes[i][1]];
@@ -166,6 +153,53 @@ export default class Playground {
 
     private isValidIndexes(x: number, y: number) {
         return x >= 0 && x < this._countOfTiles && y >= 0 && y < this._countOfTiles
+    }
+
+    click(x: number, y: number) {
+        if (this._isLostLevel == false) {
+            const colPos = Math.floor(x / this._tileSize) % this._countOfTiles;
+            const rowPos = Math.floor(y / this._tileSize) % this._countOfTiles;
+            // console.log(colPos, rowPos);
+            
+    
+            if (this._tiles[colPos][rowPos].visible == false && this._tiles[colPos][rowPos].hasSweetie() == false) {
+                this._talesVisible++;
+            }
+    
+            this._isLostLevel = this._tiles[colPos][rowPos].click();
+    
+            if (this._tiles[colPos][rowPos].neighbourSweetiesCount == 0) {
+                this.showTilesAround(colPos, rowPos);
+            }
+    
+            this.render();
+        }
+
+        return this.winProcess();
+    }
+
+    countPoints(): number {
+        let points: number = 0;
+
+        this._tiles.forEach((tilesRow) => {
+            points += tilesRow.filter((tile) => {
+                if (tile.sweetie == undefined) return false;
+                return tile.sweetie.getCrashed() == false && tile.sweetie.getEaten() == false;
+            })
+            .length;
+        });
+
+        return points;
+    }
+
+    isWin(): boolean {
+        const sweetiesCount: number = this._sweetiesCount + ((this._withFox) ? 1 : 0);
+        
+        return this._countOfTiles ** 2 == (sweetiesCount + this._talesVisible);
+    }
+
+    winProcess() {
+        return new LevelSatus(this.isWin(), this._isLostLevel, ((this.isWin()) ? this.countPoints() : 0));
     }
 }
  

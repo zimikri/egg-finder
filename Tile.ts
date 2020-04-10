@@ -33,6 +33,10 @@ export default class Tile {
         this._size = size;
     }
 
+    get sweetie(): Sweetie {
+        return this._sweetie; 
+    }
+
     set sweetie(sweetie: Sweetie) {
         this._sweetie = sweetie; 
     }
@@ -53,6 +57,10 @@ export default class Tile {
 
         this.renderNeighbourSweetiesCount(ctx);
 
+        if (this._visible == false) {
+            ctx.fillStyle = 'rgba(76, 154, 42, 0.3)';
+            ctx.fillRect(x, y, this._size, this._size);
+        }
         ctx.strokeStyle = '#cccccc';
         ctx.strokeRect(x, y, this._size, this._size);
     }
@@ -68,7 +76,7 @@ export default class Tile {
 
     private getImage(): HTMLImageElement {
         if (this._visible == false) return this._coverImage;
-        if (this._sweetie != undefined) return this._sweetie.img;
+        if (this._sweetie != undefined) return this._sweetie.getImage();
         return document.getElementById('empty') as HTMLImageElement;
     }
 
@@ -83,20 +91,20 @@ export default class Tile {
 
     click() {
         if (this._sweetie != undefined) {
+            if (this._sweetie.type == 'fox') {
+                this.setVisible();
+                return true; // lost level
+            }
             if (this._visible == false) this._sweetie.crash();
             if (this._visible == true) this._sweetie.eat();
-        } else {
-            
         }
-        
+        this.setVisible();
 
-        this._visible = true;
-        // this.render(ctx);
-        // ctx.fillStyle = 'red';
-        // ctx.fillRect(this._left, this._top, this._size, this._size);
+        return false;
     }
 
     private getCoverImage(): HTMLImageElement {
+        return document.getElementById('empty') as HTMLImageElement;
         const colors: string[] = ['red', 'white', 'blue'];
         const imgID: string = colors[Math.floor(Math.random() * 3)];
         return document.getElementById(imgID) as HTMLImageElement;

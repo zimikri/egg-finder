@@ -1,11 +1,21 @@
 body {
+    background-color: #7EB25F;
     /* background-image: url(./assets/images/field.png); */
 }
+#button-wrapper {
+    position: fixed;
+    top: 5;
+    left: 5;
+}
+button {
+    display: block;
+}
+
 body, .main-canvas {
     margin: 0;
 }
 .main-canvas {
-
+    /* border: border: 1px solid #cccccc;; */
 }
 #center-container {
 display: flex;
