@@ -12,6 +12,7 @@ class Game {
         this._actualLevelSatus = new LevelSatus_1.default();
         this._replayButton = document.querySelector(`#replay`);
         this._nextLevelButton = document.querySelector(`#next-level`);
+        this.initCanvas();
         this.createListeners();
         this.startGame();
     }
@@ -28,24 +29,36 @@ class Game {
         this._actualLevel = (levelCount == undefined) ? new Level_1.default(this._canvas, this._ctx) : new Level_1.default(this._canvas, this._ctx, levelCount);
     }
     setButtons() {
-        // if (this._actualLevelSatus.win) this._gameScore
         this._nextLevelButton.textContent = (this._actualLevel.getLevelCounter() == this._maxLevelCount && this._actualLevelSatus.win) ? 'Új játék' : 'Következő';
         this._replayButton.disabled = false;
         this._nextLevelButton.disabled = !this._actualLevelSatus.win;
     }
+    initCanvas() {
+        const clientWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        const clientHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+        document.querySelector('#center-container').setAttribute("style", `height:${clientHeight}px`);
+        this._canvas.parentElement.setAttribute("style", `height:${clientHeight}px`);
+        if (clientWidth <= clientHeight) {
+            this._canvas.width = clientWidth;
+            this._canvas.height = clientHeight;
+        }
+        else {
+            this._canvas.height = clientHeight;
+            this._canvas.width = Math.round(this._canvas.height * 0.56);
+        }
+        this._ctx.lineWidth = 1;
+    }
     createListeners() {
         this._canvas.addEventListener('click', (event) => {
-            // TODO: Call this._actualLevel.click; what return value we need?
-            // console.log(event.pageX, event.pageY);
             this._actualLevelSatus = this._actualLevel.click(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
             if (this._actualLevelSatus.win) {
                 this._gameScore += this._actualLevelSatus.points;
                 console.log(`Total score: ${this._gameScore}`);
             }
             this.setButtons();
-            // TODO: step next level upon returned values or end game
         });
         window.addEventListener('resize', () => {
+            this.initCanvas();
             this._actualLevel.resize();
         });
         this._replayButton.addEventListener('click', (event) => {
@@ -60,11 +73,11 @@ class Game {
         this._nextLevelButton.addEventListener('click', (event) => {
             if (this._nextLevelButton.disabled)
                 return;
+            this._actualLevel.resize();
             if (this._nextLevelButton.textContent == 'Új játék') {
                 this.restartGame();
             }
             else {
-                console.log(this._actualLevelSatus);
                 this.startNewLevel();
             }
         });
@@ -81,36 +94,27 @@ class Level {
     constructor(canvas, ctx, levelCounter = Level.NEXT_LEVEL) {
         this._canvas = canvas;
         this._ctx = ctx;
-        this._maxCanvasSize = 800;
+        // this._maxCanvasSize = 800;
         console.log(`Level.NEXT_LEVEL: ${Level.NEXT_LEVEL}`);
         this._levelCounter = levelCounter;
         Level.NEXT_LEVEL = levelCounter;
         Level.NEXT_LEVEL++;
-        this.initCanvas();
+        // this.initCanvas();
         this.initLevel();
     }
     initLevel() {
-        const settings = this.getLevelSettings();
-        this._playground = new Playground_1.default(settings);
+        this._settings = new LevelSettings_1.default(this._canvas, this._ctx, this._levelCounter);
+        this._playground = new Playground_1.default(this._settings);
         this._playground.render();
     }
-    getLevelSettings() {
-        const settings = new LevelSettings_1.default(this._canvas, this._ctx, Level.NEXT_LEVEL);
-        return settings;
-    }
-    initCanvas() {
-        const clientWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-        const clientHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-        document.querySelector('#center-container').setAttribute("style", `height:${clientHeight}px`);
-        // this._canvas.parentElement.setAttribute("style", `height:${clientHeight}px`);
-        this._canvas.width = Math.min(clientWidth - 10, clientHeight - 10, this._maxCanvasSize);
-        this._canvas.height = this._canvas.width;
-        // this._canvas.setAttribute('style', 'border: 1px solid #cccccc;');
-        this._ctx.lineWidth = 0.3;
-    }
+    // getLevelSettings(): LevelSettings {
+    //     const settings = new LevelSettings(this._canvas, this._ctx, this._levelCounter);
+    //     return settings;
+    // }
     resize() {
-        this.initCanvas();
-        this._playground.size = this._canvas.width;
+        // this.initCanvas();
+        this._settings.initSizes();
+        this._playground.render();
     }
     click(x, y) {
         // TODO: what return value we need?
@@ -144,22 +148,37 @@ exports.default = LevelSatus;
 Object.defineProperty(exports, "__esModule", { value: true });
 class LevelSettings {
     constructor(canvas, ctx, level) {
-        this._level = level - 1;
+        this._tilesMatrix = [
+            [4, 6],
+            [4, 7],
+            [5, 8],
+            [5, 9],
+            [6, 10],
+            [6, 11],
+            [7, 12],
+            [7, 13]
+        ];
+        this._level = level;
         this._canvas = canvas;
         this._ctx = ctx;
-        this._size = this.getSize();
-        this._countOfTiles = this.getCountOfTiles();
+        this._colCount = this.getColCount();
+        this._rowCount = this.getRowCount();
+        this.initSizes();
         this._sweetiesCount = this.getSweetiesCount();
         this._withFox = this.getWithFox();
     }
+    initSizes() {
+        this._tileSize = this.getTileSize();
+        this._playgroundWidth = this.getPlaygroundWidth();
+        this._playgroundHeigth = this.getPlaygroundHeigth();
+        this._playgroundXOffset = this.getPlaygroundXOffset();
+        this._playgroundYOffset = this.getPlaygroundYOffset();
+    }
+    get canvas() {
+        return this._canvas;
+    }
     get ctx() {
         return this._ctx;
-    }
-    get size() {
-        return this._size;
-    }
-    get countOfTiles() {
-        return this._countOfTiles;
     }
     get sweetiesCount() {
         return this._sweetiesCount;
@@ -167,17 +186,55 @@ class LevelSettings {
     get withFox() {
         return this._withFox;
     }
-    getSize() {
-        return this._canvas.width;
+    get colCount() {
+        return this._colCount;
     }
-    getCountOfTiles() {
-        return (this._level + 5);
+    get rowCount() {
+        return this._rowCount;
+    }
+    get tileSize() {
+        return this._tileSize;
+    }
+    get playgroundWidth() {
+        return this._playgroundWidth;
+    }
+    get playgroundHeigth() {
+        return this._playgroundHeigth;
+    }
+    get playgroundXOffset() {
+        return this._playgroundXOffset;
+    }
+    get playgroundYOffset() {
+        return this._playgroundYOffset;
     }
     getSweetiesCount() {
-        return Math.floor(this._level ** 1.5) + 4;
+        return Math.floor(this._level ** 1.2) + 3;
     }
     getWithFox() {
         return this._level > 2;
+    }
+    getColCount() {
+        return this._tilesMatrix[this._level - 1][0];
+    }
+    getRowCount() {
+        return this._tilesMatrix[this._level - 1][1];
+    }
+    getTileSize() {
+        const maxPlaygroundWidth = Math.floor(this._canvas.width * 0.85);
+        const maxPlaygroundHeigth = Math.floor(this._canvas.height - this._canvas.width * 0.5);
+        return Math.floor(Math.min(maxPlaygroundWidth / this._colCount, maxPlaygroundHeigth / this._rowCount));
+    }
+    getPlaygroundWidth() {
+        return Math.round(this._colCount * this._tileSize);
+    }
+    getPlaygroundHeigth() {
+        return Math.round(this._rowCount * this._tileSize);
+    }
+    getPlaygroundXOffset() {
+        return Math.floor((this._canvas.width - this._playgroundWidth) / 2);
+    }
+    getPlaygroundYOffset() {
+        return Math.round(this._canvas.width * 0.345);
     }
 }
 exports.default = LevelSettings;
@@ -191,49 +248,42 @@ const Sweetie_1 = require("./Sweetie");
 class Playground {
     constructor(settings) {
         this._levelSettings = settings;
-        this._size = this._levelSettings.size;
-        this._countOfTiles = this._levelSettings.countOfTiles;
-        this._tileSize = this._size / this._countOfTiles;
         this._ctx = this._levelSettings.ctx;
+        this._tileSize = this._levelSettings.tileSize;
         this._sweetiesCount = this._levelSettings.sweetiesCount;
         this._withFox = this._levelSettings.withFox;
         this._talesVisible = 0;
         this._isLostLevel = false;
-        this._background = document.getElementById('field');
+        // this._background = document.getElementById('field') as HTMLImageElement;
         this.initTiles();
         this.addSweeties();
         this.neighbourSweetiesCount();
     }
-    set size(size) {
-        this._size = size;
-        this._tileSize = this._size / this._countOfTiles;
-        this.render();
-    }
     render() {
-        this._ctx.clearRect(0, 0, this._size, this._size);
+        this._ctx.clearRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
         this._ctx.fillStyle = '#7EB25F';
-        this._ctx.fillRect(0, 0, this._size, this._size);
-        //    this._ctx.drawImage(this._background, 0, 0, this._size, this._size);
-        const sweetiesCount = this._sweetiesCount + ((this._withFox) ? 1 : 0);
+        this._ctx.fillRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
+        this._ctx.fillRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
+        this._tileSize = this._levelSettings.tileSize;
         this._tiles.forEach((tilesRow, rowIndex) => {
             tilesRow.forEach((tile, colIndex) => {
-                tile.size = this._tileSize;
+                tile.size = this._levelSettings.tileSize;
                 if (this.isWin()) {
                     if (tile.hasSweetie())
                         tile.setSweetieType('egg');
                     tile.setVisible();
                 }
-                tile.render(this._ctx, this._tileSize * rowIndex, this._tileSize * colIndex);
+                tile.render(this._ctx, this._tileSize * colIndex + this._levelSettings.playgroundXOffset, this._tileSize * rowIndex + this._levelSettings.playgroundYOffset);
             });
         });
     }
     initTiles() {
         this._tiles = [];
         let rowTmp;
-        for (let rowIndex = 0; rowIndex < this._countOfTiles; rowIndex++) {
+        for (let rowIndex = 0; rowIndex < this._levelSettings.rowCount; rowIndex++) {
             rowTmp = [];
-            for (let colIndex = 0; colIndex < this._countOfTiles; colIndex++) {
-                rowTmp.push(new Tile_1.default(this._tileSize, this._tileSize * rowIndex, this._tileSize * colIndex));
+            for (let colIndex = 0; colIndex < this._levelSettings.colCount; colIndex++) {
+                rowTmp.push(new Tile_1.default(this._tileSize, this._tileSize * colIndex + this._levelSettings.playgroundXOffset, this._tileSize * rowIndex + this._levelSettings.playgroundYOffset));
             }
             this._tiles.push(rowTmp);
         }
@@ -241,20 +291,19 @@ class Playground {
     addSweeties() {
         let addedSweeties = 0;
         let randomRowIndex;
-        let randomColumnIndex;
+        let randomColIndex;
         if (this._withFox) {
-            randomRowIndex = this.getRandomIndex();
-            randomColumnIndex = this.getRandomIndex();
-            this._tiles[randomRowIndex][randomColumnIndex].sweetie = new Sweetie_1.default('fox');
-            this._tiles[randomRowIndex][randomColumnIndex].neighbourSweetiesCount = 9;
+            randomRowIndex = this.getRandomRowIndex();
+            randomColIndex = this.getRandomColIndex();
+            this._tiles[randomRowIndex][randomColIndex].sweetie = new Sweetie_1.default('fox');
+            this._tiles[randomRowIndex][randomColIndex].neighbourSweetiesCount = 9;
         }
         while (addedSweeties < this._sweetiesCount) {
-            randomRowIndex = this.getRandomIndex();
-            randomColumnIndex = this.getRandomIndex();
-            if (this._tiles[randomRowIndex][randomColumnIndex].hasSweetie() == false) {
-                this._tiles[randomRowIndex][randomColumnIndex].sweetie = new Sweetie_1.default('egg');
-                this._tiles[randomRowIndex][randomColumnIndex].neighbourSweetiesCount = 9;
-                // console.log(randomRowIndex, randomColumnIndex, this._tiles[randomRowIndex][randomColumnIndex]);
+            randomRowIndex = this.getRandomRowIndex();
+            randomColIndex = this.getRandomColIndex();
+            if (this._tiles[randomRowIndex][randomColIndex].hasSweetie() == false) {
+                this._tiles[randomRowIndex][randomColIndex].sweetie = new Sweetie_1.default('egg');
+                this._tiles[randomRowIndex][randomColIndex].neighbourSweetiesCount = 9;
                 addedSweeties++;
             }
         }
@@ -264,7 +313,9 @@ class Playground {
             tileRow.forEach((tile, colPos) => {
                 if (tile.hasSweetie() == false && tile.neighbourSweetiesCount < 9) {
                     tile.neighbourSweetiesCount = this.findNeighbourIndexes(colPos, rowPos)
-                        .filter((indexes) => { return this._tiles[indexes[0]][indexes[1]].hasSweetie(); })
+                        .filter((indexes) => {
+                        return this._tiles[indexes[1]][indexes[0]].hasSweetie();
+                    })
                         .length;
                 }
             });
@@ -276,17 +327,17 @@ class Playground {
             for (let deltaRow = -1; deltaRow <= 1; deltaRow++) {
                 if (deltaCol == 0 && deltaRow == 0)
                     continue;
-                if (this.isValidIndexes(rowPos + deltaCol, colPos + deltaRow)) {
-                    neighbourIndexes.push([rowPos + deltaCol, colPos + deltaRow]);
+                if (this.isValidIndexes(colPos + deltaCol, rowPos + deltaRow)) {
+                    neighbourIndexes.push([colPos + deltaCol, rowPos + deltaRow]);
                 }
             }
         }
         return neighbourIndexes;
     }
-    showTilesAround(rowPos, colPos) {
+    showTilesAround(colPos, rowPos) {
         const neighbourIndexes = this.findNeighbourIndexes(colPos, rowPos);
         for (let i = 0; i < neighbourIndexes.length; i++) {
-            const tile = this._tiles[neighbourIndexes[i][0]][neighbourIndexes[i][1]];
+            const tile = this._tiles[neighbourIndexes[i][1]][neighbourIndexes[i][0]];
             if (tile.visible)
                 continue;
             if (tile.neighbourSweetiesCount < 9) {
@@ -297,22 +348,25 @@ class Playground {
                 this.showTilesAround(neighbourIndexes[i][0], neighbourIndexes[i][1]);
         }
     }
-    getRandomIndex() {
-        return Math.floor(Math.random() * this._countOfTiles);
+    getRandomColIndex() {
+        return Math.floor(Math.random() * this._levelSettings.colCount);
+    }
+    getRandomRowIndex() {
+        return Math.floor(Math.random() * this._levelSettings.rowCount);
     }
     isValidIndexes(x, y) {
-        return x >= 0 && x < this._countOfTiles && y >= 0 && y < this._countOfTiles;
+        return x >= 0 && x < this._levelSettings.colCount && y >= 0 && y < this._levelSettings.rowCount;
     }
     click(x, y) {
         if (this._isLostLevel == false) {
-            const colPos = Math.floor(x / this._tileSize) % this._countOfTiles;
-            const rowPos = Math.floor(y / this._tileSize) % this._countOfTiles;
-            // console.log(colPos, rowPos);
-            if (this._tiles[colPos][rowPos].visible == false && this._tiles[colPos][rowPos].hasSweetie() == false) {
+            const colPos = Math.floor((x - this._levelSettings.playgroundXOffset) / this._tileSize) % this._levelSettings.colCount;
+            const rowPos = Math.floor((y - this._levelSettings.playgroundYOffset) / this._tileSize) % this._levelSettings.rowCount;
+            console.log(colPos, rowPos, this.isValidIndexes(colPos, rowPos));
+            if (this._tiles[rowPos][colPos].visible == false && this._tiles[rowPos][colPos].hasSweetie() == false) {
                 this._talesVisible++;
             }
-            this._isLostLevel = this._tiles[colPos][rowPos].click();
-            if (this._tiles[colPos][rowPos].neighbourSweetiesCount == 0) {
+            this._isLostLevel = this._tiles[rowPos][colPos].click();
+            if (this._tiles[rowPos][colPos].neighbourSweetiesCount == 0) {
                 this.showTilesAround(colPos, rowPos);
             }
             this.render();
@@ -333,7 +387,7 @@ class Playground {
     }
     isWin() {
         const sweetiesCount = this._sweetiesCount + ((this._withFox) ? 1 : 0);
-        return this._countOfTiles ** 2 == (sweetiesCount + this._talesVisible);
+        return this._levelSettings.colCount * this._levelSettings.rowCount == (sweetiesCount + this._talesVisible);
     }
     winProcess() {
         return new LevelSatus_1.default(this.isWin(), this._isLostLevel, ((this.isWin()) ? this.countPoints() : 0));

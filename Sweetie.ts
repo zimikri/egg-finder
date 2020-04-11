@@ -70,10 +70,4 @@ export default class Sweetie {
     //     return this._eaten;
     // }
 
-    // set type(type: string) {
-    //     if (this._type == undefined) {
-    //         this._type = type;
-    //         this._img = document.getElementById(type) as HTMLImageElement;
-    //     }
-    // }
 }

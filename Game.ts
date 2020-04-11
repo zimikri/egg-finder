@@ -22,6 +22,7 @@ export default class Game {
         this._replayButton = document.querySelector(`#replay`);
         this._nextLevelButton = document.querySelector(`#next-level`);
 
+        this.initCanvas();
         this.createListeners();
         this.startGame();
     }
@@ -42,18 +43,32 @@ export default class Game {
     }
 
     setButtons() {
-        // if (this._actualLevelSatus.win) this._gameScore
         this._nextLevelButton.textContent = (this._actualLevel.getLevelCounter() == this._maxLevelCount && this._actualLevelSatus.win) ? 'Új játék' : 'Következő';
         this._replayButton.disabled = false;
         this._nextLevelButton.disabled = !this._actualLevelSatus.win;
 
     }
 
+    initCanvas() {
+        const clientWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        const clientHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+    
+        document.querySelector('#center-container').setAttribute("style", `height:${clientHeight}px`);
+        this._canvas.parentElement.setAttribute("style", `height:${clientHeight}px`);
+        
+        if (clientWidth <= clientHeight) {
+            this._canvas.width = clientWidth;
+            this._canvas.height = clientHeight;
+        } else {
+            this._canvas.height = clientHeight;
+            this._canvas.width = Math.round(this._canvas.height * 0.56);
+        }
+        
+        this._ctx.lineWidth = 1;
+    }
+
     private createListeners() {
         this._canvas.addEventListener('click', (event) => {
-            // TODO: Call this._actualLevel.click; what return value we need?
-            // console.log(event.pageX, event.pageY);
-            
             this._actualLevelSatus = this._actualLevel.click(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
 
             if (this._actualLevelSatus.win) {
@@ -62,11 +77,10 @@ export default class Game {
             }
 
             this.setButtons();
-            // TODO: step next level upon returned values or end game
-        
         });
 
         window.addEventListener('resize', () => {
+            this.initCanvas();
             this._actualLevel.resize();
         });
     
@@ -83,11 +97,10 @@ export default class Game {
 
         this._nextLevelButton.addEventListener('click', (event) => {
             if (this._nextLevelButton.disabled) return;
+            this._actualLevel.resize();
             if (this._nextLevelButton.textContent == 'Új játék') {
                 this.restartGame();
             } else {
-                console.log(this._actualLevelSatus);
-                
                 this.startNewLevel();
             }
         });

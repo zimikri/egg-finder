@@ -6,11 +6,9 @@ import Tile from './Tile';
 import Sweetie from './Sweetie';
 
 export default class Playground {
-    private _size: number;
-    private _countOfTiles: number;
     private _tileSize: number;
     private _tiles: Tile[][];
-    private _background: HTMLImageElement;
+    // private _background: HTMLImageElement;
     private _ctx: CanvasRenderingContext2D;
     private _sweetiesCount: number;
     private _withFox: boolean;
@@ -21,44 +19,36 @@ export default class Playground {
     constructor(settings: LevelSettings) {
         
         this._levelSettings = settings;
-        this._size = this._levelSettings.size;
-        this._countOfTiles = this._levelSettings.countOfTiles;
-        this._tileSize = this._size / this._countOfTiles;
         this._ctx = this._levelSettings.ctx;
+
+        this._tileSize = this._levelSettings.tileSize;
         this._sweetiesCount = this._levelSettings.sweetiesCount;
         this._withFox = this._levelSettings.withFox;
         this._talesVisible = 0;
         this._isLostLevel = false;
 
-        this._background = document.getElementById('field') as HTMLImageElement;
+        // this._background = document.getElementById('field') as HTMLImageElement;
 
         this.initTiles();
         this.addSweeties();
         this.neighbourSweetiesCount();
     }
 
-    set size(size: number) {
-        this._size = size;
-        this._tileSize = this._size / this._countOfTiles;
-        this.render();
-    }
-
     render() {
-       this._ctx.clearRect(0, 0, this._size, this._size);
+       this._ctx.clearRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
        this._ctx.fillStyle = '#7EB25F';
-       this._ctx.fillRect(0, 0, this._size, this._size);
-    //    this._ctx.drawImage(this._background, 0, 0, this._size, this._size);
+       this._ctx.fillRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
+       this._ctx.fillRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
+       this._tileSize = this._levelSettings.tileSize;
 
-       const sweetiesCount: number = this._sweetiesCount + ((this._withFox) ? 1 : 0);
-        
         this._tiles.forEach((tilesRow, rowIndex) => {
             tilesRow.forEach((tile, colIndex) => {
-                tile.size = this._tileSize;
+                tile.size = this._levelSettings.tileSize;
                 if (this.isWin()) {
                     if (tile.hasSweetie()) tile.setSweetieType('egg');
                     tile.setVisible();
                 }
-                tile.render(this._ctx, this._tileSize * rowIndex, this._tileSize * colIndex);
+                tile.render(this._ctx, this._tileSize * colIndex + this._levelSettings.playgroundXOffset, this._tileSize * rowIndex + this._levelSettings.playgroundYOffset);
             });
         });
     }
@@ -67,38 +57,36 @@ export default class Playground {
         this._tiles = [];
         let rowTmp: Tile[];
         
-        for (let rowIndex = 0; rowIndex < this._countOfTiles; rowIndex++) {
+        for (let rowIndex = 0; rowIndex < this._levelSettings.rowCount; rowIndex++) {
             rowTmp = [];
-            for (let colIndex = 0; colIndex < this._countOfTiles; colIndex++) {
-                rowTmp.push(new Tile(this._tileSize, this._tileSize * rowIndex, this._tileSize * colIndex));
+
+            for (let colIndex = 0; colIndex < this._levelSettings.colCount; colIndex++) {
+                rowTmp.push(new Tile(this._tileSize, this._tileSize * colIndex + this._levelSettings.playgroundXOffset, this._tileSize * rowIndex + this._levelSettings.playgroundYOffset));
             }
 
             this._tiles.push(rowTmp);
         }
-        
     }
 
     private addSweeties() {
         let addedSweeties: number = 0;
         let randomRowIndex: number;
-        let randomColumnIndex: number;
+        let randomColIndex: number;
 
         if (this._withFox) {
-            randomRowIndex = this.getRandomIndex();
-            randomColumnIndex = this.getRandomIndex();
-            this._tiles[randomRowIndex][randomColumnIndex].sweetie = new Sweetie('fox');
-            this._tiles[randomRowIndex][randomColumnIndex].neighbourSweetiesCount = 9;
+            randomRowIndex = this.getRandomRowIndex();
+            randomColIndex = this.getRandomColIndex();
+            this._tiles[randomRowIndex][randomColIndex].sweetie = new Sweetie('fox');
+            this._tiles[randomRowIndex][randomColIndex].neighbourSweetiesCount = 9;
         }
             
         while (addedSweeties < this._sweetiesCount) {
-            randomRowIndex = this.getRandomIndex();
-            randomColumnIndex = this.getRandomIndex();
+            randomRowIndex = this.getRandomRowIndex();
+            randomColIndex = this.getRandomColIndex();
             
-            if (this._tiles[randomRowIndex][randomColumnIndex].hasSweetie() == false) {
-                this._tiles[randomRowIndex][randomColumnIndex].sweetie = new Sweetie('egg');
-                this._tiles[randomRowIndex][randomColumnIndex].neighbourSweetiesCount = 9;
-
-                // console.log(randomRowIndex, randomColumnIndex, this._tiles[randomRowIndex][randomColumnIndex]);
+            if (this._tiles[randomRowIndex][randomColIndex].hasSweetie() == false) {
+                this._tiles[randomRowIndex][randomColIndex].sweetie = new Sweetie('egg');
+                this._tiles[randomRowIndex][randomColIndex].neighbourSweetiesCount = 9;
                 
                 addedSweeties++;
             }
@@ -110,7 +98,10 @@ export default class Playground {
             tileRow.forEach((tile, colPos) => {
                 if (tile.hasSweetie() == false && tile.neighbourSweetiesCount < 9) {
                     tile.neighbourSweetiesCount = this.findNeighbourIndexes(colPos, rowPos)
-                    .filter((indexes) => {return this._tiles[indexes[0]][indexes[1]].hasSweetie();})
+                    .filter((indexes) => {
+                        
+                        return this._tiles[indexes[1]][indexes[0]].hasSweetie();
+                    })
                     .length;
                 }
             });
@@ -123,20 +114,20 @@ export default class Playground {
         for (let deltaCol = -1; deltaCol <= 1; deltaCol++) {
             for (let deltaRow = -1; deltaRow <= 1; deltaRow++) {
                 if (deltaCol == 0 && deltaRow == 0) continue;
-                if (this.isValidIndexes(rowPos + deltaCol, colPos + deltaRow)) {
-                    neighbourIndexes.push([rowPos + deltaCol, colPos + deltaRow])
+                if (this.isValidIndexes(colPos + deltaCol, rowPos + deltaRow)) {
+                    neighbourIndexes.push([colPos + deltaCol, rowPos + deltaRow])
                 }
             }
         }
-    
+        
         return neighbourIndexes;
     }
     
-    showTilesAround(rowPos: number, colPos: number): void {
+    showTilesAround(colPos: number, rowPos: number): void {
         const neighbourIndexes: number[][] = this.findNeighbourIndexes(colPos, rowPos);
 
         for (let i = 0; i < neighbourIndexes.length; i++) {
-            const tile: Tile = this._tiles[neighbourIndexes[i][0]][neighbourIndexes[i][1]];
+            const tile: Tile = this._tiles[neighbourIndexes[i][1]][neighbourIndexes[i][0]];
 
             if (tile.visible) continue;
             if (tile.neighbourSweetiesCount < 9) {
@@ -147,28 +138,31 @@ export default class Playground {
         }
     }
 
-    private getRandomIndex(): number {
-        return Math.floor(Math.random() * this._countOfTiles);
+    private getRandomColIndex(): number {
+        return Math.floor(Math.random() * this._levelSettings.colCount);
+    }
+
+    private getRandomRowIndex(): number {
+        return Math.floor(Math.random() * this._levelSettings.rowCount);
     }
 
     private isValidIndexes(x: number, y: number) {
-        return x >= 0 && x < this._countOfTiles && y >= 0 && y < this._countOfTiles
+        return x >= 0 && x < this._levelSettings.colCount && y >= 0 && y < this._levelSettings.rowCount;
     }
 
     click(x: number, y: number) {
         if (this._isLostLevel == false) {
-            const colPos = Math.floor(x / this._tileSize) % this._countOfTiles;
-            const rowPos = Math.floor(y / this._tileSize) % this._countOfTiles;
-            // console.log(colPos, rowPos);
+            const colPos = Math.floor((x - this._levelSettings.playgroundXOffset) / this._tileSize) % this._levelSettings.colCount;
+            const rowPos = Math.floor((y - this._levelSettings.playgroundYOffset) / this._tileSize) % this._levelSettings.rowCount;
+            console.log(colPos, rowPos, this.isValidIndexes(colPos, rowPos));
             
-    
-            if (this._tiles[colPos][rowPos].visible == false && this._tiles[colPos][rowPos].hasSweetie() == false) {
+            if (this._tiles[rowPos][colPos].visible == false && this._tiles[rowPos][colPos].hasSweetie() == false) {
                 this._talesVisible++;
             }
     
-            this._isLostLevel = this._tiles[colPos][rowPos].click();
+            this._isLostLevel = this._tiles[rowPos][colPos].click();
     
-            if (this._tiles[colPos][rowPos].neighbourSweetiesCount == 0) {
+            if (this._tiles[rowPos][colPos].neighbourSweetiesCount == 0) {
                 this.showTilesAround(colPos, rowPos);
             }
     
@@ -195,7 +189,7 @@ export default class Playground {
     isWin(): boolean {
         const sweetiesCount: number = this._sweetiesCount + ((this._withFox) ? 1 : 0);
         
-        return this._countOfTiles ** 2 == (sweetiesCount + this._talesVisible);
+        return this._levelSettings.colCount * this._levelSettings.rowCount == (sweetiesCount + this._talesVisible);
     }
 
     winProcess() {
