@@ -90,6 +90,13 @@ export default class Tile {
     }
 
     private getImage(): HTMLImageElement {
+        // if (this._sweetie != undefined) {
+        //     if (this._sweetie._type == 'fox'){
+        //         this.setVisible;
+        //         return  this._gameSettings.getImage('fox');
+        //     }
+        // }
+
         if (this._visible == false) return this._coverImage;
         if (this._sweetie != undefined) {
             const imageID: string = this._sweetie._type + ((this._sweetie.getCrashed()) ? '-crashed' : '');

@@ -47,6 +47,11 @@ class Game {
                     }
                 }, 300);
             }
+            else if (this._actualLevelSatus.lost) {
+                setTimeout(() => {
+                    alert(`Hűha, sajnos erre járt a róka és elűzte a nyuszit!\nÚjra kell játszanod ezt a szintet!`);
+                }, 300);
+            }
             this.setButtons();
         });
         window.addEventListener('resize', () => {
@@ -635,6 +640,12 @@ class Tile {
         return 'empty';
     }
     getImage() {
+        // if (this._sweetie != undefined) {
+        //     if (this._sweetie._type == 'fox'){
+        //         this.setVisible;
+        //         return  this._gameSettings.getImage('fox');
+        //     }
+        // }
         if (this._visible == false)
             return this._coverImage;
         if (this._sweetie != undefined) {
