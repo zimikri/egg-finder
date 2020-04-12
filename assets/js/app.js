@@ -2,36 +2,140 @@
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 const LevelSatus_1 = require("./LevelSatus");
+const GameSettings_1 = require("./GameSettings");
 const Level_1 = require("./Level");
 class Game {
-    constructor(canvasID = 'canvas1') {
-        this._canvas = document.querySelector(`#${canvasID}`);
-        this._ctx = this._canvas.getContext('2d');
-        this._maxLevelCount = 5;
-        this._gameScore = 0;
+    constructor(canvasID, maxLevelCount) {
+        this._settings = new GameSettings_1.default(canvasID, maxLevelCount);
         this._actualLevelSatus = new LevelSatus_1.default();
         this._replayButton = document.querySelector(`#replay`);
         this._nextLevelButton = document.querySelector(`#next-level`);
-        this.initCanvas();
+        this._newGameButton = document.querySelector(`#new-game`);
         this.createListeners();
         this.startGame();
     }
-    startGame(firstLevel = 1) {
-        this.startNewLevel(firstLevel);
+    startGame() {
+        this.startNewLevel();
         this.setButtons();
     }
     restartGame() {
-        this._gameScore = 0;
+        this._settings.initSettings();
         this._actualLevelSatus = new LevelSatus_1.default();
         this.startGame();
     }
-    startNewLevel(levelCount) {
-        this._actualLevel = (levelCount == undefined) ? new Level_1.default(this._canvas, this._ctx) : new Level_1.default(this._canvas, this._ctx, levelCount);
+    startNewLevel() {
+        this._nextLevelButton.disabled = true;
+        this._actualLevel = new Level_1.default(this._settings);
     }
     setButtons() {
-        this._nextLevelButton.textContent = (this._actualLevel.getLevelCounter() == this._maxLevelCount && this._actualLevelSatus.win) ? 'Új játék' : 'Következő';
+        this._nextLevelButton.disabled = (this._actualLevel.getLevelCounter() == this._settings.maxLevelCount) || (this._actualLevelSatus.win == undefined) || (this._actualLevelSatus.win == false);
         this._replayButton.disabled = false;
-        this._nextLevelButton.disabled = !this._actualLevelSatus.win;
+    }
+    createListeners() {
+        this._settings.canvas.addEventListener('click', (event) => {
+            this._actualLevelSatus = this._actualLevel.click(event.pageX - this._settings.canvas.offsetLeft, event.pageY - this._settings.canvas.offsetTop);
+            if (this._actualLevelSatus.win) {
+                this._settings.addGamescore(this._actualLevelSatus.points);
+                setTimeout(() => {
+                    if (this._actualLevel.getLevelCounter() == this._settings.maxLevelCount) {
+                        if (confirm('A játéknak vége, ha tetszett kezdd előről :)\n\nBoldog Húsvétot!')) {
+                            this.restartGame();
+                        }
+                    }
+                    else {
+                        alert(`Ügyes vagy, sikeresen begyűjtöttél ${this._actualLevelSatus.points} tojást!`);
+                    }
+                }, 300);
+            }
+            this.setButtons();
+        });
+        window.addEventListener('resize', () => {
+            this._actualLevel.resize();
+        });
+        this._replayButton.addEventListener('click', (event) => {
+            if (this._replayButton.disabled)
+                return;
+            if (this._actualLevelSatus.win) {
+                this._settings.addGamescore(-this._actualLevelSatus.points);
+            }
+            this.startNewLevel();
+        });
+        this._nextLevelButton.addEventListener('click', (event) => {
+            if (this._nextLevelButton.disabled)
+                return;
+            if (this._actualLevel.getLevelCounter() == this._settings.maxLevelCount) {
+                alert('A játéknak vége, ha tetszett kezdd előről :)');
+            }
+            else if (this._actualLevelSatus.win != undefined && this._actualLevelSatus.win) {
+                this._settings.incrementLevel();
+                this.startNewLevel();
+            }
+        });
+        this._newGameButton.addEventListener('click', (event) => {
+            this.restartGame();
+        });
+    }
+}
+exports.default = Game;
+
+},{"./GameSettings":2,"./Level":3,"./LevelSatus":4}],2:[function(require,module,exports){
+'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
+class GameSettings {
+    constructor(canvasID = 'main-canvas', maxLevelCount = 7) {
+        this._canvas = document.querySelector(`#main-canvas`);
+        this._ctx = this._canvas.getContext('2d');
+        this._maxLevelCount = maxLevelCount;
+        this.setTileMatrix();
+        this.setImages();
+        this._canvasScale = 3;
+        this._canvasMaxSidePaddingPx = 35;
+        this._canvasMaxBottomPaddingPx = 100;
+        this._canvasMinBottomPaddingPx = 60;
+        this._canvasMaxHeaderHightInPx = 160;
+        this._smallFontSizeInPx = 14;
+        this._titleMaxWidthInpx = 500;
+        this.initCanvas();
+        this.initSettings();
+    }
+    setTileMatrix() {
+        this._tilesMatrix = [
+            [4, 6],
+            [4, 7],
+            [5, 8],
+            [5, 9],
+            [6, 10],
+            [6, 11],
+            [7, 12],
+            [7, 13]
+        ];
+    }
+    setImages() {
+        this._images = new Map([
+            ['canvas-background', './assets/images/canvas-background.png'],
+            ['empty', './assets/images/empty.png'],
+            ['fox', './assets/images/fox.png'],
+            ['flowers', './assets/images/flowers.png'],
+            ['egg', './assets/images/egg.png'],
+            ['egg-crashed', './assets/images/egg-crashed.png'],
+            ['cbg-header-right-bottom', './assets/images/cbg-header-right-bottom.png'],
+            ['cbg-head-left-top', './assets/images/cbg-head-left-top.png'],
+            ['title', './assets/images/title.png'],
+            ['red', './assets/images/red.png']
+        ]);
+    }
+    initSettings() {
+        this._gameScore = 0;
+        this._actualLevel = 1;
+        this.calculateSettingsForActualLevel();
+    }
+    calculateSettingsForActualLevel() {
+        this._colCount = this.getColCount();
+        this._rowCount = this.getRowCount();
+        this.initSizes();
+        this._sweetiesCount = this.getSweetiesCount();
+        this._withFox = this.getWithFox();
+        this.drawBackground();
     }
     initCanvas() {
         const clientWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -46,139 +150,141 @@ class Game {
             this._canvas.height = clientHeight;
             this._canvas.width = Math.round(this._canvas.height * 0.56);
         }
-        this._ctx.lineWidth = 1;
+        this._canvas.style.width = this._canvas.width + 'px';
+        this._canvas.style.height = this._canvas.height + 'px';
+        this._canvas.width = this._canvasScale * this._canvas.width;
+        this._canvas.height = this._canvasScale * this._canvas.height;
+        this._ctx.lineWidth = this._canvasScale / 2;
+        this.drawBackground();
     }
-    createListeners() {
-        this._canvas.addEventListener('click', (event) => {
-            this._actualLevelSatus = this._actualLevel.click(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
-            if (this._actualLevelSatus.win) {
-                this._gameScore += this._actualLevelSatus.points;
-                console.log(`Total score: ${this._gameScore}`);
-            }
-            this.setButtons();
-        });
-        window.addEventListener('resize', () => {
-            this.initCanvas();
-            this._actualLevel.resize();
-        });
-        this._replayButton.addEventListener('click', (event) => {
-            if (this._replayButton.disabled)
-                return;
-            if (this._actualLevelSatus.win) {
-                this._gameScore -= this._actualLevelSatus.points;
-                console.log(`Total score: ${this._gameScore}`);
-            }
-            this.startNewLevel(this._actualLevel.getLevelCounter());
-        });
-        this._nextLevelButton.addEventListener('click', (event) => {
-            if (this._nextLevelButton.disabled)
-                return;
-            this._actualLevel.resize();
-            if (this._nextLevelButton.textContent == 'Új játék') {
-                this.restartGame();
-            }
-            else {
-                this.startNewLevel();
-            }
-        });
+    drawBackground() {
+        this._ctx.drawImage(this.getImage('cbg-empty-head'), 0, 0, this._canvas.width, this._canvas.height);
+        this.drawCanvasHeader();
+        this.setButtonsWrapper('button-wrapper');
     }
-}
-exports.default = Game;
-
-},{"./Level":2,"./LevelSatus":3}],2:[function(require,module,exports){
-'use strict';
-Object.defineProperty(exports, "__esModule", { value: true });
-const LevelSettings_1 = require("./LevelSettings");
-const Playground_1 = require("./Playground");
-class Level {
-    constructor(canvas, ctx, levelCounter = Level.NEXT_LEVEL) {
-        this._canvas = canvas;
-        this._ctx = ctx;
-        // this._maxCanvasSize = 800;
-        console.log(`Level.NEXT_LEVEL: ${Level.NEXT_LEVEL}`);
-        this._levelCounter = levelCounter;
-        Level.NEXT_LEVEL = levelCounter;
-        Level.NEXT_LEVEL++;
-        // this.initCanvas();
-        this.initLevel();
+    drawCanvasHeader() {
+        // Clear cavas header for changing only score
+        this._ctx.fillStyle = "rgb(126, 177, 95)";
+        this._ctx.fillRect(0, 0, this._canvas.width, this._canvasHeadHeight);
+        // Rabbit
+        const imageSize = 386; // 386 is the original size of rightBottom image
+        const imageScale = this._canvasHeadHeight / imageSize;
+        this._ctx.drawImage(this.getImage('cbg-header-right-bottom'), this._canvas.width - this._canvasHeadHeight, 0, this._canvasHeadHeight, this._canvasHeadHeight);
+        // Topleft corner
+        const topLeftCornerImageSize = 103 * imageScale;
+        this._ctx.drawImage(this.getImage('cbg-head-left-top'), 0, 0, topLeftCornerImageSize, topLeftCornerImageSize);
+        // Texts
+        let textHeight;
+        this._ctx.fillStyle = "white";
+        // Level text
+        textHeight = this.setHeaderSmallTextSize() * 1.1;
+        const topOfSmallText = this._canvasHeadHeight - 2.4 * textHeight;
+        this._ctx.fillText(`Szint: ${this._actualLevel}`, this._playgroundXOffset, topOfSmallText);
+        this._ctx.fillText(`Megtalált tojások: ${this._gameScore}`, this._playgroundXOffset, this._canvasHeadHeight - textHeight);
+        // Title text
+        const titleWidth = Math.min(this._titleMaxWidthInpx * this._canvasScale, this._canvas.width - this._canvasSidePadding - this._canvasHeadHeight * 0.6);
+        const titleHeight = titleWidth / 1622 * 200;
+        const titleOffsetX = (this._canvas.width - titleWidth - this._canvasHeadHeight * 0.4) / 2;
+        const titleOffsetY = (topOfSmallText - titleHeight) / 2;
+        this._ctx.drawImage(this.getImage('title'), titleOffsetX, titleOffsetY, titleWidth, titleHeight);
     }
-    initLevel() {
-        this._settings = new LevelSettings_1.default(this._canvas, this._ctx, this._levelCounter);
-        this._playground = new Playground_1.default(this._settings);
-        this._playground.render();
+    setHeaderSmallTextSize() {
+        const newSize = Math.round(this._smallFontSizeInPx * this._canvasHeadHeight / this._canvasMaxHeaderHightInPx);
+        const fontText = `${newSize}px Krungthep`;
+        this._ctx.font = fontText;
+        return newSize;
     }
-    // getLevelSettings(): LevelSettings {
-    //     const settings = new LevelSettings(this._canvas, this._ctx, this._levelCounter);
-    //     return settings;
-    // }
-    resize() {
-        // this.initCanvas();
-        this._settings.initSizes();
-        this._playground.render();
+    setButtonsWrapper(wrapperID) {
+        const wrapper = document.getElementById(wrapperID);
+        wrapper.style.width = (this._playgroundWidth / this._canvasScale) + 'px';
+        wrapper.style.height = (this._canvasBottomPadding / this._canvasScale) + 'px';
+        wrapper.style.left = (this._canvas.offsetLeft + this._playgroundXOffset / this._canvasScale) + 'px';
     }
-    click(x, y) {
-        // TODO: what return value we need?
-        // console.log(x, y);
-        return this._playground.click(x, y);
-        // TODO: step next level upon returned values or end game
-    }
-    setButtons(levelStatus) {
-    }
-    getLevelCounter() {
-        return this._levelCounter;
-    }
-}
-exports.default = Level;
-Level.NEXT_LEVEL = 1;
-
-},{"./LevelSettings":4,"./Playground":5}],3:[function(require,module,exports){
-'use strict';
-Object.defineProperty(exports, "__esModule", { value: true });
-class LevelSatus {
-    constructor(win = false, lost = false, points = 0) {
-        this.win = win;
-        this.lost = lost;
-        this.points = points;
-    }
-}
-exports.default = LevelSatus;
-
-},{}],4:[function(require,module,exports){
-'use strict';
-Object.defineProperty(exports, "__esModule", { value: true });
-class LevelSettings {
-    constructor(canvas, ctx, level) {
-        this._tilesMatrix = [
-            [4, 6],
-            [4, 7],
-            [5, 8],
-            [5, 9],
-            [6, 10],
-            [6, 11],
-            [7, 12],
-            [7, 13]
-        ];
-        this._level = level;
-        this._canvas = canvas;
-        this._ctx = ctx;
-        this._colCount = this.getColCount();
-        this._rowCount = this.getRowCount();
-        this.initSizes();
-        this._sweetiesCount = this.getSweetiesCount();
-        this._withFox = this.getWithFox();
+    getImage(imageID) {
+        return document.getElementById(imageID);
+        // TODO: check why the below code not working
+        // let img = new Image();
+        // console.log(imageID, this._images.get(imageID));
+        // img.src = (this._images.get(imageID) != undefined) ? this._images.get(imageID) : './assets/images/empty.png';
+        // img.onload = function() {
+        //     return img;
+        // }
+        // return img;
     }
     initSizes() {
-        this._tileSize = this.getTileSize();
-        this._playgroundWidth = this.getPlaygroundWidth();
-        this._playgroundHeigth = this.getPlaygroundHeigth();
-        this._playgroundXOffset = this.getPlaygroundXOffset();
-        this._playgroundYOffset = this.getPlaygroundYOffset();
+        this.calculateHeaderHeight();
+        this.calculatePaddings();
+        this.setTileSize();
+        this._playgroundWidth = this._tileSize * this._colCount;
+        this._playgroundHeigth = this._tileSize * this._rowCount;
+        this._playgroundXOffset = (this._canvas.width - this._playgroundWidth) / 2;
+        this._playgroundYOffset = this._canvasHeadHeight;
+    }
+    calculateHeaderHeight() {
+        this._canvasHeadHeight = Math.round(this._canvas.width * 0.345);
+        this._canvasHeadHeight = (this._canvasHeadHeight < this._canvasMaxHeaderHightInPx * this._canvasScale) ? this._canvasHeadHeight : this._canvasMaxHeaderHightInPx * this._canvasScale;
+    }
+    calculatePaddings() {
+        this._canvasSidePadding = this._canvas.width * 0.075;
+        this._canvasSidePadding = (this._canvasSidePadding > this._canvasMaxSidePaddingPx * this._canvasScale * this.canvasScale) ? this._canvasMaxSidePaddingPx * this._canvasScale * this.canvasScale : this._canvasSidePadding;
+        this._canvasBottomPadding = this._canvasSidePadding * 2;
+        this._canvasBottomPadding = (this._canvasBottomPadding > this._canvasMaxBottomPaddingPx * this._canvasScale) ? this._canvasMaxBottomPaddingPx * this._canvasScale : this._canvasBottomPadding;
+        this._canvasBottomPadding = (this._canvasBottomPadding < this._canvasMinBottomPaddingPx * this._canvasScale) ? this._canvasMinBottomPaddingPx * this._canvasScale : this._canvasBottomPadding;
+    }
+    setTileSize() {
+        const maxPlaygroundWidth = Math.floor(this._canvas.width - this._canvasSidePadding * 2);
+        const maxPlaygroundHeigth = Math.floor(this._canvas.height - this._canvasHeadHeight - this._canvasBottomPadding);
+        this._tileSize = Math.floor(Math.min(maxPlaygroundWidth / this._colCount, maxPlaygroundHeigth / this._rowCount));
+    }
+    // getPlaygroundWidth(): number {
+    //     return Math.round(this._colCount * this._tileSize);
+    // }
+    // getPlaygroundHeigth(): number {
+    //     return Math.round(this._rowCount * this._tileSize);
+    // }
+    // getPlaygroundXOffset(): number {
+    //     return Math.floor((this._canvas.width - this._playgroundWidth) / 2);
+    // }
+    // getPlaygroundYOffset(): number {
+    //     return Math.round(this._canvas.width * 0.345);
+    // }
+    incrementLevel() {
+        this._actualLevel++;
+        this.calculateSettingsForActualLevel();
+    }
+    getSweetiesCount() {
+        return Math.floor(this._actualLevel ** 1.2) + 3;
+    }
+    getWithFox() {
+        return this._actualLevel > 2;
+    }
+    getColCount() {
+        return this._tilesMatrix[this._actualLevel - 1][0];
+    }
+    getRowCount() {
+        return this._tilesMatrix[this._actualLevel - 1][1];
+    }
+    addGamescore(num) {
+        this._gameScore += num;
+        this.drawCanvasHeader();
     }
     get canvas() {
         return this._canvas;
     }
     get ctx() {
         return this._ctx;
+    }
+    get canvasScale() {
+        return this._canvasScale;
+    }
+    get gameScore() {
+        return this._gameScore;
+    }
+    get levelCounter() {
+        return this._actualLevel;
+    }
+    get maxLevelCount() {
+        return this._maxLevelCount;
     }
     get sweetiesCount() {
         return this._sweetiesCount;
@@ -207,37 +313,56 @@ class LevelSettings {
     get playgroundYOffset() {
         return this._playgroundYOffset;
     }
-    getSweetiesCount() {
-        return Math.floor(this._level ** 1.2) + 3;
+}
+exports.default = GameSettings;
+
+},{}],3:[function(require,module,exports){
+'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
+const Playground_1 = require("./Playground");
+class Level {
+    // private _gameScore: number;
+    constructor(gameSettings) {
+        this._gameSettings = gameSettings;
+        // this._gameScore = gameScore;
+        // console.log(`Level.NEXT_LEVEL: ${Level.NEXT_LEVEL}`);
+        this._levelCounter = this._gameSettings.levelCounter;
+        Level.NEXT_LEVEL = this._levelCounter;
+        Level.NEXT_LEVEL++;
+        // console.log('Level created');
+        // this.initCanvas();
+        this.startLevel();
     }
-    getWithFox() {
-        return this._level > 2;
+    startLevel() {
+        this._playground = new Playground_1.default(this._gameSettings);
+        this._playground.render();
     }
-    getColCount() {
-        return this._tilesMatrix[this._level - 1][0];
+    resize() {
+        this._gameSettings.initCanvas();
+        this._gameSettings.initSizes();
+        this._playground.render();
     }
-    getRowCount() {
-        return this._tilesMatrix[this._level - 1][1];
+    click(x, y) {
+        return this._playground.click(x, y);
     }
-    getTileSize() {
-        const maxPlaygroundWidth = Math.floor(this._canvas.width * 0.85);
-        const maxPlaygroundHeigth = Math.floor(this._canvas.height - this._canvas.width * 0.5);
-        return Math.floor(Math.min(maxPlaygroundWidth / this._colCount, maxPlaygroundHeigth / this._rowCount));
-    }
-    getPlaygroundWidth() {
-        return Math.round(this._colCount * this._tileSize);
-    }
-    getPlaygroundHeigth() {
-        return Math.round(this._rowCount * this._tileSize);
-    }
-    getPlaygroundXOffset() {
-        return Math.floor((this._canvas.width - this._playgroundWidth) / 2);
-    }
-    getPlaygroundYOffset() {
-        return Math.round(this._canvas.width * 0.345);
+    getLevelCounter() {
+        return this._levelCounter;
     }
 }
-exports.default = LevelSettings;
+exports.default = Level;
+Level.NEXT_LEVEL = 1;
+
+},{"./Playground":5}],4:[function(require,module,exports){
+'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
+class LevelSatus {
+    constructor(win = false, lost = false, points = 0) {
+        this.win = win;
+        this.lost = lost;
+        this.points = points;
+    }
+}
+exports.default = LevelSatus;
 
 },{}],5:[function(require,module,exports){
 'use strict';
@@ -247,43 +372,41 @@ const Tile_1 = require("./Tile");
 const Sweetie_1 = require("./Sweetie");
 class Playground {
     constructor(settings) {
-        this._levelSettings = settings;
-        this._ctx = this._levelSettings.ctx;
-        this._tileSize = this._levelSettings.tileSize;
-        this._sweetiesCount = this._levelSettings.sweetiesCount;
-        this._withFox = this._levelSettings.withFox;
+        this._gameSettings = settings;
+        this._ctx = this._gameSettings.ctx;
+        this._tileSize = this._gameSettings.tileSize;
+        this._sweetiesCount = this._gameSettings.sweetiesCount;
+        this._withFox = this._gameSettings.withFox;
         this._talesVisible = 0;
         this._isLostLevel = false;
-        // this._background = document.getElementById('field') as HTMLImageElement;
         this.initTiles();
         this.addSweeties();
         this.neighbourSweetiesCount();
     }
     render() {
-        this._ctx.clearRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
+        this._ctx.clearRect(this._gameSettings.playgroundXOffset, this._gameSettings.playgroundYOffset, this._gameSettings.playgroundWidth, this._gameSettings.playgroundHeigth);
         this._ctx.fillStyle = '#7EB25F';
-        this._ctx.fillRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
-        this._ctx.fillRect(this._levelSettings.playgroundXOffset, this._levelSettings.playgroundYOffset, this._levelSettings.playgroundWidth, this._levelSettings.playgroundHeigth);
-        this._tileSize = this._levelSettings.tileSize;
+        this._ctx.fillRect(this._gameSettings.playgroundXOffset, this._gameSettings.playgroundYOffset, this._gameSettings.playgroundWidth, this._gameSettings.playgroundHeigth);
+        this._tileSize = this._gameSettings.tileSize;
         this._tiles.forEach((tilesRow, rowIndex) => {
             tilesRow.forEach((tile, colIndex) => {
-                tile.size = this._levelSettings.tileSize;
+                tile.size = this._gameSettings.tileSize;
                 if (this.isWin()) {
                     if (tile.hasSweetie())
                         tile.setSweetieType('egg');
                     tile.setVisible();
                 }
-                tile.render(this._ctx, this._tileSize * colIndex + this._levelSettings.playgroundXOffset, this._tileSize * rowIndex + this._levelSettings.playgroundYOffset);
+                tile.render(this._tileSize * colIndex, this._tileSize * rowIndex);
             });
         });
     }
     initTiles() {
         this._tiles = [];
         let rowTmp;
-        for (let rowIndex = 0; rowIndex < this._levelSettings.rowCount; rowIndex++) {
+        for (let rowIndex = 0; rowIndex < this._gameSettings.rowCount; rowIndex++) {
             rowTmp = [];
-            for (let colIndex = 0; colIndex < this._levelSettings.colCount; colIndex++) {
-                rowTmp.push(new Tile_1.default(this._tileSize, this._tileSize * colIndex + this._levelSettings.playgroundXOffset, this._tileSize * rowIndex + this._levelSettings.playgroundYOffset));
+            for (let colIndex = 0; colIndex < this._gameSettings.colCount; colIndex++) {
+                rowTmp.push(new Tile_1.default(this._gameSettings, this._tileSize * colIndex, this._tileSize * rowIndex));
             }
             this._tiles.push(rowTmp);
         }
@@ -349,19 +472,20 @@ class Playground {
         }
     }
     getRandomColIndex() {
-        return Math.floor(Math.random() * this._levelSettings.colCount);
+        return Math.floor(Math.random() * this._gameSettings.colCount);
     }
     getRandomRowIndex() {
-        return Math.floor(Math.random() * this._levelSettings.rowCount);
+        return Math.floor(Math.random() * this._gameSettings.rowCount);
     }
     isValidIndexes(x, y) {
-        return x >= 0 && x < this._levelSettings.colCount && y >= 0 && y < this._levelSettings.rowCount;
+        return x >= 0 && x < this._gameSettings.colCount && y >= 0 && y < this._gameSettings.rowCount;
     }
     click(x, y) {
         if (this._isLostLevel == false) {
-            const colPos = Math.floor((x - this._levelSettings.playgroundXOffset) / this._tileSize) % this._levelSettings.colCount;
-            const rowPos = Math.floor((y - this._levelSettings.playgroundYOffset) / this._tileSize) % this._levelSettings.rowCount;
-            console.log(colPos, rowPos, this.isValidIndexes(colPos, rowPos));
+            x = this._gameSettings.canvasScale * x;
+            y = this._gameSettings.canvasScale * y;
+            const colPos = Math.floor((x - this._gameSettings.playgroundXOffset) / this._tileSize) % this._gameSettings.colCount;
+            const rowPos = Math.floor((y - this._gameSettings.playgroundYOffset) / this._tileSize) % this._gameSettings.rowCount;
             if (this._tiles[rowPos][colPos].visible == false && this._tiles[rowPos][colPos].hasSweetie() == false) {
                 this._talesVisible++;
             }
@@ -387,7 +511,7 @@ class Playground {
     }
     isWin() {
         const sweetiesCount = this._sweetiesCount + ((this._withFox) ? 1 : 0);
-        return this._levelSettings.colCount * this._levelSettings.rowCount == (sweetiesCount + this._talesVisible);
+        return this._gameSettings.colCount * this._gameSettings.rowCount == (sweetiesCount + this._talesVisible);
     }
     winProcess() {
         return new LevelSatus_1.default(this.isWin(), this._isLostLevel, ((this.isWin()) ? this.countPoints() : 0));
@@ -395,7 +519,7 @@ class Playground {
 }
 exports.default = Playground;
 
-},{"./LevelSatus":3,"./Sweetie":6,"./Tile":7}],6:[function(require,module,exports){
+},{"./LevelSatus":4,"./Sweetie":6,"./Tile":7}],6:[function(require,module,exports){
 'use scrict';
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -450,10 +574,12 @@ exports.default = Sweetie;
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 class Tile {
-    constructor(size, top = 0, left = 0) {
-        this._size = size;
-        this._top = top;
-        this._left = left;
+    constructor(gameSettings, top = 0, left = 0) {
+        this._gameSettings = gameSettings;
+        this._ctx = this._gameSettings.ctx;
+        this._size = this._gameSettings.tileSize;
+        this._posY = top + this._gameSettings.playgroundYOffset;
+        this._posX = left + this._gameSettings.playgroundXOffset;
         this._coverImage = this.getCoverImage();
         this._visible = false;
         this._neighbourSweetiesCount = 0;
@@ -479,17 +605,18 @@ class Tile {
     set neighbourSweetiesCount(num) {
         this._neighbourSweetiesCount = num;
     }
-    render(ctx, x = this._left, y = this._top) {
-        this._left = x;
-        this._top = y;
-        ctx.drawImage(this.getImage(), x, y, this._size, this._size);
-        this.renderNeighbourSweetiesCount(ctx);
+    render(x, y) {
+        this._posX = x + this._gameSettings.playgroundXOffset;
+        this._posY = y + this._gameSettings.playgroundYOffset;
+        let scaleTitleImage = (this._sweetie != undefined && this._sweetie.type == 'fox') ? 1 : 0.8;
+        this._ctx.drawImage(this.getImage(), this._posX + this._size * 0.1, this._posY + this._size * 0.1, this._size * 0.8, this._size * 0.8);
+        this.renderNeighbourSweetiesCount();
         if (this._visible == false) {
-            ctx.fillStyle = 'rgba(76, 154, 42, 0.3)';
-            ctx.fillRect(x, y, this._size, this._size);
+            this._ctx.fillStyle = 'rgba(76, 154, 42, 0.3)';
+            this._ctx.fillRect(this._posX, this._posY, this._size, this._size);
         }
-        ctx.strokeStyle = '#cccccc';
-        ctx.strokeRect(x, y, this._size, this._size);
+        this._ctx.strokeStyle = '#cccccc';
+        this._ctx.strokeRect(this._posX, this._posY, this._size, this._size);
     }
     hasSweetie() {
         if (this._sweetie == undefined)
@@ -499,19 +626,26 @@ class Tile {
     setSweetieType(type) {
         this._sweetie.type = type;
     }
+    getImageName() {
+        if (this._visible == false)
+            return 'empty';
+        if (this._sweetie != undefined) {
+            return this._sweetie._type + ((this._sweetie.getCrashed()) ? '-crashed' : '');
+        }
+        return 'empty';
+    }
     getImage() {
         if (this._visible == false)
             return this._coverImage;
-        if (this._sweetie != undefined)
-            return this._sweetie.getImage();
-        return document.getElementById('empty');
+        if (this._sweetie != undefined) {
+            const imageID = this._sweetie._type + ((this._sweetie.getCrashed()) ? '-crashed' : '');
+            return this._gameSettings.getImage(imageID);
+        }
+        return this._gameSettings.getImage('empty');
     }
-    renderNeighbourSweetiesCount(ctx) {
+    renderNeighbourSweetiesCount() {
         if (this._visible && this._neighbourSweetiesCount < 9 && this._neighbourSweetiesCount > 0) {
-            // Draw small flowers later
-            ctx.fillStyle = "blue";
-            ctx.font = "bold 30px Arial";
-            ctx.fillText(this._neighbourSweetiesCount.toString(), (this._left + this._size / 2) - 15, (this._top + this._size / 2) + 15);
+            this._ctx.drawImage(this._gameSettings.getImage('flowers'), 0, (this._neighbourSweetiesCount - 1) * 500, 500, 500, this._posX + this._size * 0.1, this._posY + this._size * 0.1, this._size * 0.8, this._size * 0.8);
         }
     }
     click() {
@@ -529,10 +663,7 @@ class Tile {
         return false;
     }
     getCoverImage() {
-        return document.getElementById('empty');
-        const colors = ['red', 'white', 'blue'];
-        const imgID = colors[Math.floor(Math.random() * 3)];
-        return document.getElementById(imgID);
+        return this._gameSettings.getImage('empty');
     }
     toString() {
         return this._sweetie.toString();
@@ -544,9 +675,19 @@ exports.default = Tile;
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 const Game_1 = require("./Game");
-const CANVAS_ID = 'canvas1';
+const CANVAS_ID = 'main-canvas';
 window.onload = (event) => {
     const game = new Game_1.default(CANVAS_ID);
+    window.moveTo(0, 0);
+    if (document.all) {
+        top.window.resizeTo(screen.availWidth, screen.availHeight);
+    }
+    // else if (document.layers || document.getElementById) {
+    //     if (top.window.outerHeight < screen.availHeight || top.window.outerWidth < screen.availWidth) {
+    //         top.window.outerHeight = screen.availHeight;
+    //         top.window.outerWidth = screen.availWidth;
+    //     }
+    // }
 };
 
 },{"./Game":1}]},{},[8]);

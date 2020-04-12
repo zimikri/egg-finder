@@ -8,6 +8,7 @@ setting.json
 minesweeper.ts
 tsconfig.json
 tmp
+munka
 .gitignore
 
 # Created by https://www.gitignore.io/api/visualstudiocode

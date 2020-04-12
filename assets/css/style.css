@@ -1,24 +1,53 @@
-body {
-    background-color: #7EB25F;
-    /* background-image: url(./assets/images/field.png); */
+@font-face {font-family: "Krungthep";
+    src: url("./fonts/Krungthep.eot"); /* IE9*/
+    src: url("./fonts/Krungthep.eot?#iefix") format("embedded-opentype"), /* IE6-IE8 */
+    url("./fonts/Krungthep.woff2") format("woff2"), /* chrome、firefox */
+    url("./fonts/Krungthep.woff") format("woff"), /* chrome、firefox */
+    url("./fonts/Krungthep.ttf") format("truetype"), /* chrome、firefox、opera、Safari, Android, iOS 4.2+*/
+    url("./fonts/Krungthep.svg") format("svg"); /* iOS 4.1- */
+  }
+  
+body, canvas, #button-wrapper button {
+    font-family:"Krungthep" !important;
 }
-#button-wrapper {
-    position: fixed;
-    top: 5;
-    left: 5;
-}
-button {
-    display: block;
-}
-
 body, .main-canvas {
     margin: 0;
 }
 .main-canvas {
-    border: 1px solid #cccccc;;
+    cursor: pointer;
 }
 #center-container {
-display: flex;
-justify-content: center;
-align-items: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+
+#button-wrapper {
+    position: fixed;
+    bottom: 0;
+    z-index: 100;
+}
+#new-game-wrapper {
+    text-align: left;
+}
+#replay-wrapper {
+    text-align: center;
+}
+#next-level-wrapper {
+    text-align: right;
+}
+
+#button-wrapper button {
+    border: 1px solid #cccccc;
+    padding: 8px;
+    background-color: rgba(126, 178, 95, 0.7);
+    color: white;
+    cursor: pointer;
+}
+#button-wrapper button:disabled {
+    border: 1px solid #bbbbbb;
+    color: #bbbbbb;
+    cursor:default ;
+
+}
+

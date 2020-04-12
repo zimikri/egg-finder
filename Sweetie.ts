@@ -1,7 +1,7 @@
 'use scrict'
 
 export default class Sweetie {
-    private _type: string;
+     _type: string;
     private _img: HTMLImageElement;
     private _crashed: boolean;
     private _eaten: boolean;
@@ -61,13 +61,4 @@ export default class Sweetie {
         return '\t' + [this._type, this._img, this._crashed, this._eaten].join('\t\n') + '\n';
         
     }
-
-    // get crashed (): boolean {
-    //     return this._crashed;
-    // }
-
-    // get eaten (): boolean {
-    //     return this._eaten;
-    // }
-
 }

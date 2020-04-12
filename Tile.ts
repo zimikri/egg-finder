@@ -1,20 +1,26 @@
 'use strict';
 
+import GameSettings from './GameSettings';
 import Sweetie from './Sweetie';
 
 export default class Tile {
-    private _top: number;
-    private _left: number;
+    private _gameSettings: GameSettings;
+    private _ctx: CanvasRenderingContext2D;
+    private _posY: number;
+    private _posX: number;
     private _size: number;
     private _coverImage: HTMLImageElement;
     private _sweetie: Sweetie;
     private _visible: boolean;
     private _neighbourSweetiesCount: number;
 
-    constructor(size: number, top: number = 0, left: number = 0) {
-        this._size = size;
-        this._top = top;
-        this._left = left;
+    constructor(gameSettings: GameSettings, top: number = 0, left: number = 0) {
+        this._gameSettings = gameSettings;
+        this._ctx = this._gameSettings.ctx;
+
+        this._size = this._gameSettings.tileSize;
+        this._posY = top + this._gameSettings.playgroundYOffset;
+        this._posX = left + this._gameSettings.playgroundXOffset;
 
         this._coverImage = this.getCoverImage();
         this._visible = false;
@@ -49,20 +55,21 @@ export default class Tile {
         this._neighbourSweetiesCount = num;
     }
 
-    render(ctx: CanvasRenderingContext2D, x: number = this._left, y: number = this._top) {
-        this._left = x;
-        this._top = y;
+    render(x: number, y: number) {
+        this._posX = x + this._gameSettings.playgroundXOffset;
+        this._posY = y + this._gameSettings.playgroundYOffset;
+        let scaleTitleImage: number = (this._sweetie != undefined && this._sweetie.type == 'fox') ? 1 : 0.8;
 
-        ctx.drawImage(this.getImage(), x, y, this._size, this._size);
+        this._ctx.drawImage(this.getImage(), this._posX + this._size * 0.1, this._posY + this._size * 0.1, this._size * 0.8, this._size * 0.8);
 
-        this.renderNeighbourSweetiesCount(ctx);
+        this.renderNeighbourSweetiesCount();
 
         if (this._visible == false) {
-            ctx.fillStyle = 'rgba(76, 154, 42, 0.3)';
-            ctx.fillRect(x, y, this._size, this._size);
+            this._ctx.fillStyle = 'rgba(76, 154, 42, 0.3)';
+            this._ctx.fillRect(this._posX, this._posY, this._size, this._size);
         }
-        ctx.strokeStyle = '#cccccc';
-        ctx.strokeRect(x, y, this._size, this._size);
+        this._ctx.strokeStyle = '#cccccc';
+        this._ctx.strokeRect(this._posX, this._posY, this._size, this._size);
     }
 
     hasSweetie(): boolean {
@@ -74,18 +81,31 @@ export default class Tile {
         this._sweetie.type = type;
     }
 
-    private getImage(): HTMLImageElement {
-        if (this._visible == false) return this._coverImage;
-        if (this._sweetie != undefined) return this._sweetie.getImage();
-        return document.getElementById('empty') as HTMLImageElement;
+    getImageName() {
+        if (this._visible == false) return 'empty';
+        if (this._sweetie != undefined) {
+            return  this._sweetie._type + ((this._sweetie.getCrashed()) ? '-crashed' : '');
+        }
+        return 'empty';
     }
 
-    private renderNeighbourSweetiesCount(ctx: CanvasRenderingContext2D) {
+    private getImage(): HTMLImageElement {
+        if (this._visible == false) return this._coverImage;
+        if (this._sweetie != undefined) {
+            const imageID: string = this._sweetie._type + ((this._sweetie.getCrashed()) ? '-crashed' : '');
+            return  this._gameSettings.getImage(imageID);
+        }
+        return this._gameSettings.getImage('empty');
+    }
+
+    private renderNeighbourSweetiesCount() {
         if (this._visible && this._neighbourSweetiesCount < 9 && this._neighbourSweetiesCount > 0) {
-            // Draw small flowers later
-            ctx.fillStyle = "blue";
-            ctx.font = "bold 30px Arial";
-            ctx.fillText(this._neighbourSweetiesCount.toString(), (this._left + this._size / 2) - 15, (this._top + this._size / 2) + 15);
+            this._ctx.drawImage(this._gameSettings.getImage('flowers'), 
+                0, (this._neighbourSweetiesCount - 1) * 500,
+                500, 500,
+                this._posX + this._size * 0.1, this._posY + this._size * 0.1,
+                this._size * 0.8, this._size * 0.8
+            );
         }
     }
 
@@ -104,10 +124,7 @@ export default class Tile {
     }
 
     private getCoverImage(): HTMLImageElement {
-        return document.getElementById('empty') as HTMLImageElement;
-        const colors: string[] = ['red', 'white', 'blue'];
-        const imgID: string = colors[Math.floor(Math.random() * 3)];
-        return document.getElementById(imgID) as HTMLImageElement;
+        return this._gameSettings.getImage('empty');
     }
 
     toString():string {

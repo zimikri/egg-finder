@@ -8,21 +8,28 @@
         <script> var exports = {}; </script>
     </head>
     <body>
-        <div id="button-wrapper">
-            <button id="replay">Újra</button>
-            <button id="next-level" disabled>Következő</button>
+        
+        <div id="center-container">
+            <canvas id="main-canvas" class="main-canvas">Válassz modernebb böngészőt!</canvas>
         </div>
+        <table id="button-wrapper">
+            <tr>
+                <td id="new-game-wrapper"><button id="new-game">Új játék</button></td>
+                <td id="replay-wrapper"><button id="replay">Újra</button></td>
+                <td id="next-level-wrapper"><button id="next-level" disabled>Tovább</button></td>
+            </tr>
+        </table>
+        <img id="title" src="./assets/images/title.png" style="display: none;">
+        <img id="cbg-empty-head" src="./assets/images/cbg-empty-head.png" style="display: none;">
+        <img id="cbg-head-left-top" src="./assets/images/cbg-head-left-top.png" style="display: none;">
+        <img id="cbg-header-right-bottom" src="./assets/images/cbg-header-right-bottom.png" style="display: none;">
         <img id="empty" src="./assets/images/empty.png" style="display: none;">
         <img id="fox" src="./assets/images/fox.png" style="display: none;">
-        <img id="field" src="./assets/images/field.png" style="display: none;">
+        <img id="flowers" src="./assets/images/flowers.png" style="display: none;">
         <img id="egg" src="./assets/images/egg.png" style="display: none;">
         <img id="egg-crashed" src="./assets/images/egg-crashed.png" style="display: none;">
-        <img id="blue" src="./assets/images/blue.png" style="display: none;">
-        <img id="white" src="./assets/images/white.png" style="display: none;">
-        <img id="red" src="./assets/images/red.png" style="display: none;">
-        <div id="center-container">
-            <canvas id="canvas1" class="main-canvas">Válassz modernebb böngészőt!</canvas>
-        </div>
+        
+        
         <script type="text/javascript" src="./assets/js/app.js"></script>
     </body>
 </html>
