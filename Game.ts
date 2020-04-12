@@ -43,7 +43,10 @@ export default class Game {
     }
 
     setButtons() {
-        this._nextLevelButton.disabled = (this._actualLevel.getLevelCounter() == this._settings.maxLevelCount) || (this._actualLevelSatus.win == undefined) || (this._actualLevelSatus.win == false);
+        this._nextLevelButton.disabled = (this._actualLevel.getLevelCounter() == this._settings.maxLevelCount)
+            || (this._actualLevelSatus.win == undefined)
+            || (this._actualLevelSatus.win == false)
+            || (this._actualLevelSatus.points == 0);
         this._replayButton.disabled = false;
     }
 
@@ -54,20 +57,27 @@ export default class Game {
             this._actualLevelSatus = this._actualLevel.click(event.pageX - this._settings.canvas.offsetLeft, event.pageY - this._settings.canvas.offsetTop);
 
             if (this._actualLevelSatus.win) {
-                this._settings.addGamescore(this._actualLevelSatus.points);
-                setTimeout(() => { 
-                    if (this._actualLevel.getLevelCounter() == this._settings.maxLevelCount) {
-                        if (confirm('A játéknak vége, ha tetszett kezdd előről :)\n\nBoldog Húsvétot!')) {
-                            this.restartGame();
+                if (this._actualLevelSatus.points == 0) {
+                    setTimeout(() => { 
+                        alert(`Ez most nem sikerült, minden tojást összetörtél!\nPróbáld újra ezt a szintet!`);
+                    }, 300);
+                        
+                } else {
+                    this._settings.addGamescore(this._actualLevelSatus.points);
+                    setTimeout(() => { 
+                        if (this._actualLevel.getLevelCounter() == this._settings.maxLevelCount) {
+                            if (confirm('A játéknak vége, ha tetszett kezdd előről :)\n\nBoldog Húsvétot!')) {
+                                this.restartGame();
+                            }
+                        } else {
+                            alert(`Ügyes vagy, sikeresen begyűjtöttél ${this._actualLevelSatus.points} tojást!`);
                         }
-                    } else {
-                        alert(`Ügyes vagy, sikeresen begyűjtöttél ${this._actualLevelSatus.points} tojást!`)
-                    }
-                }, 300);
+                    }, 300);
+                }
 
             } else if (this._actualLevelSatus.lost) {
                 setTimeout(() => { 
-                    alert(`Hűha, sajnos erre járt a róka és elűzte a nyuszit!\nÚjra kell játszanod ezt a szintet!`)
+                    alert(`Hűha, sajnos erre járt a róka és elűzte a nyuszit!\nÚjra kell játszanod ezt a szintet!`);
                 }, 300);
             }
 
