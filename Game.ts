@@ -65,6 +65,10 @@ export default class Game {
                     }
                 }, 300);
 
+            } else if (this._actualLevelSatus.lost) {
+                setTimeout(() => { 
+                    alert(`Hűha, sajnos erre járt a róka és elűzte a nyuszit!\nÚjra kell játszanod ezt a szintet!`)
+                }, 300);
             }
 
             this.setButtons();
