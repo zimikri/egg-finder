@@ -6,7 +6,9 @@
     url("./fonts/Krungthep.ttf") format("truetype"), /* chrome、firefox、opera、Safari, Android, iOS 4.2+*/
     url("./fonts/Krungthep.svg") format("svg"); /* iOS 4.1- */
   }
-  
+body {
+    background-color: #333333;
+}
 body, canvas, #button-wrapper button {
     font-family:"Krungthep" !important;
 }
