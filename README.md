@@ -4,6 +4,7 @@
 
 Just to play with classes and drawing...
 
-#### Designed by @Slanehun
+#### Designed by [Slanehun](https://github.com/Slanehun)
+
 
 ![Playground](/assets/images/egg-finder-cover.png)
